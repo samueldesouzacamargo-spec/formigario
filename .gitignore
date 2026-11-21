@@ -1,0 +1,6 @@
+node_modules
+dist
+.claude
+# material de referência pessoal, fora do repositório público
+PROMPT-formigario.md
+formigario-prototipo.html

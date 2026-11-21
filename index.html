@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Formigário</title>
+<meta name="theme-color" content="#3e2716">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+<header class="top">
+  <div><h1>Formigário</h1><p>Uma colônia que cresce enquanto você trabalha. Cada fazenda nasce diferente.</p></div>
+  <div class="seg habitat" id="habitat" role="group" aria-label="Qual vidro">
+    <button data-h="ants" aria-pressed="true">Formigário</button>
+    <button data-h="reef" aria-pressed="false">Aquário marinho</button>
+  </div>
+  <div class="stats" id="stats"></div>
+</header>
+<main class="wrap">
+  <section>
+    <div class="frame" id="frame"><div class="glass">
+      <canvas id="cv" width="240" height="150" aria-label="Formigueiro em pixel art"></canvas>
+      <div id="tags"></div>
+      <div class="hud"><button class="lvl" id="lvl" aria-expanded="false" aria-controls="castes" title="Ver as funções da colônia"></button><div class="castes" id="castes" hidden></div></div>
+      <div class="treats" id="treats"></div>
+      <div class="clock" id="clock" aria-live="off"></div>
+      <button class="wout" id="wout" title="Mostrar o painel completo">Painel</button>
+    </div></div>
+    <div class="bar" id="bar">
+      <div class="seg" id="speed" role="group" aria-label="Velocidade"></div>
+      <button class="btn" id="pip">Destacar</button>
+      <button class="btn" id="mini" title="Esconde o painel e deixa só o vidro ocupando a janela">Só o vidro</button>
+      <button class="btn" id="plan" aria-pressed="false">Ver planta</button>
+      <button class="btn" id="new">Nova fazenda</button>
+    </div>
+    <div class="cols">
+      <div class="card">
+        <h3>Cérebro da colônia <span class="brainsrc" id="brainsrc"></span></h3>
+        <div class="prio" id="prio"></div>
+        <p class="thought" id="thought">Acordando…</p>
+        <p class="small">Sem chave do Gemini, o cérebro roda local, por regras. Com chave (em Opções), o Gemini lê o estado da colônia a cada ~2,5 min e quando algo acontece.</p>
+      </div>
+      <div class="card"><h3>Diário do formigueiro</h3><ul id="log"></ul></div>
+    </div>
+  </section>
+  <aside class="panel">
+    <div class="tabs" role="tablist">
+      <button role="tab" data-t="bg" aria-selected="true">Fundo</button>
+      <button role="tab" data-t="sp" aria-selected="false">Espécie</button>
+      <button role="tab" data-t="sk" aria-selected="false">Skins</button>
+    </div>
+    <div class="card" id="pane"></div>
+    <div class="card reefinfo" id="reefinfo">
+      <h3>Quem mora no recife</h3>
+      <ul>
+        <li><b>Peixes-palhaço</b> que nunca saem de perto da anêmona</li>
+        <li><b>Cirurgião-patela</b>, <b>cirurgião-amarelo</b> e <b>gramma real</b></li>
+        <li>Um <b>cardume de donzelas</b> que cresce junto com o recife</li>
+        <li>Um <b>polvo</b> tímido: mora na toca, sai mais à noite e se camufla na areia</li>
+        <li><b>Caranguejos-ermitão</b> catando a ração que cai no fundo</li>
+        <li><b>Cavalo-marinho</b> no capim, <b>estrela-do-mar</b> e <b>ouriço</b></li>
+        <li>Corais (chifre-de-veado, cérebro, gorgônia, cogumelo, zoantídeos) e esponjas de tubo e de vaso</li>
+        <li>E um <b>mini submarino amarelo</b>, só de boa</li>
+      </ul>
+      <p class="small">Os corais crescem com o tempo de app aberto (cheios em ~40 h). À noite a luz vira luar e os peixes dormem perto do fundo.</p>
+    </div>
+    <form class="card opts" id="opts">
+      <h3>Opções</h3>
+      <label for="key">Chave da API do Gemini</label>
+      <input type="password" id="key" autocomplete="off" placeholder="opcional">
+      <label for="model">Modelo</label>
+      <input type="text" id="model">
+      <p class="small">A chave fica só neste navegador (IndexedDB) e vai direto pro Google.</p>
+      <div class="row">
+        <button class="btn" type="submit">Salvar</button>
+        <button class="btn" type="button" id="export">Exportar save</button>
+        <label class="btn" style="display:inline-flex;align-items:center;margin:0">Importar save<input type="file" id="import" accept="application/json,.json" class="sr"></label>
+      </div>
+    </form>
+  </aside>
+</main>
+<p class="note">O tempo de foco só conta com o app aberto (aba visível, em segundo plano ou destacada). Progresso salvo neste navegador.</p>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>
