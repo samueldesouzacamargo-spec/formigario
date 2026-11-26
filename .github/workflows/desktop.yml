@@ -1,10 +1,12 @@
 # Gera o instalador de Windows (.exe e .msi) do app de desktop.
-# Rode em Actions → "App de desktop" → Run workflow, ou empurre uma tag v* (ex.: v0.1.0).
+# Roda sozinho em PRs que mexem no app de desktop. Ou rode em Actions → "App de desktop" → Run workflow, ou empurre uma tag v* (ex.: v0.1.0).
 # O instalador fica em "Artifacts" no fim da execução.
 name: App de desktop
 on:
   workflow_dispatch:
   push: { tags: ['v*'] }
+  pull_request:
+    paths: ['src-tauri/**', 'src/desktop.ts', '.github/workflows/desktop.yml']
 permissions: { contents: read }
 jobs:
   windows:
