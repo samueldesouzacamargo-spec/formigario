@@ -101,7 +101,7 @@ function tireRate(w: World, a: Ant) {
 /** quer cochilar agora? */
 export function wantsNap(w: World, a: Ant) {
   const m = a.mind;
-  if (!w.queen.home) return m.energy < 0.05; // fundação: ninguém dorme enquanto a rainha não tem casa
+  if (!w.queen.home) return false; // fundação: ninguém dorme enquanto a rainha não tem casa
   if (m.energy < 0.18) return true;
   if (isNight(w) && m.energy < 0.55) return Math.random() < (m.trait === 'preguicosa' ? 0.8 : 0.45);
   return m.trait === 'preguicosa' && m.energy < 0.4 && Math.random() < 0.3;
