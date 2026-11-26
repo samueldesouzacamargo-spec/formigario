@@ -55,6 +55,26 @@ export async function initDesktop(app: App, flush: () => Promise<unknown>) {
   });
   grip.addEventListener('mousedown', (e) => { if (e.button === 0) { e.preventDefault(); win.startResizeDragging('SouthEast').catch(() => {}); } });
 
+  /* ---------- barra de título própria do painel (sem a borda do Windows, que não combina com janela transparente) ---------- */
+  const head = document.createElement('div');
+  head.className = 'deskhead';
+  head.innerHTML = `<span class="t">Formigário</span>`
+    + `<button type="button" data-a="pet" title="Volta a ser o pet no canto da tela">Só o vidro</button>`
+    + `<button type="button" data-a="min" title="Minimizar" aria-label="Minimizar">–</button>`
+    + `<button type="button" data-a="close" title="Esconder na bandeja" aria-label="Fechar">×</button>`;
+  const pgrip = document.createElement('div');
+  pgrip.className = 'pgrip'; pgrip.title = 'Arraste pra mudar o tamanho';
+  body.prepend(head); body.append(pgrip);
+  head.addEventListener('mousedown', (e) => {
+    if (e.button !== 0 || (e.target as HTMLElement).closest('button')) return;
+    e.preventDefault();
+    if (e.detail === 2) win.toggleMaximize().catch(() => {}); else win.startDragging().catch(() => {});
+  });
+  head.querySelector<HTMLButtonElement>('[data-a=pet]')!.onclick = () => document.querySelector<HTMLButtonElement>('#mini')?.click();
+  head.querySelector<HTMLButtonElement>('[data-a=min]')!.onclick = () => { flush(); win.minimize(); };
+  head.querySelector<HTMLButtonElement>('[data-a=close]')!.onclick = () => { flush(); win.hide(); };
+  pgrip.addEventListener('mousedown', (e) => { if (e.button === 0) { e.preventDefault(); win.startResizeDragging('SouthEast').catch(() => {}); } });
+
   /* ---------- lembrar onde o pet mora ---------- */
   let petMode = true, timer = 0;
   const remember = () => {
@@ -68,11 +88,27 @@ export async function initDesktop(app: App, flush: () => Promise<unknown>) {
   win.onMoved(remember);
   win.onResized(remember);
 
+  // pet: a janela segue a proporção do vidro (240×150 + moldura), senão sobra um retângulo de madeira
+  const FRAME = 14, RATIO = 240 / 150;
+  let fitT = 0, fitting = false;
+  win.onResized(() => {
+    if (!petMode || fitting) return;
+    clearTimeout(fitT);
+    fitT = window.setTimeout(async () => {
+      const [size, k] = await Promise.all([win.innerSize(), win.scaleFactor()]);
+      const w = size.width / k, h = size.height / k, want = Math.round((w - FRAME) / RATIO + FRAME);
+      if (Math.abs(h - want) <= 2) return;
+      fitting = true;
+      await win.setSize(new LogicalSize(Math.round(w), want)).catch(() => {});
+      setTimeout(() => (fitting = false), 200);
+    }, 180);
+  });
+
   async function placePet() {
     const b = read<Bounds>(PET);
     const mons = await availableMonitors().catch(() => []);
     const onScreen = b && mons.some((m) => b.x + 40 >= m.position.x && b.y + 20 >= m.position.y && b.x + 40 <= m.position.x + m.size.width && b.y + 20 <= m.position.y + m.size.height);
-    const w = b?.w ?? 480, h = b?.h ?? 320;
+    const w = b?.w ?? 480, h = Math.round((w - 14) / (240 / 150) + 14);
     await win.setSize(new LogicalSize(w, h));
     if (b && onScreen) return win.setPosition(new PhysicalPosition(b.x, b.y));
     // primeira vez (ou monitor sumiu): canto de baixo à direita, acima da barra de tarefas
@@ -86,7 +122,6 @@ export async function initDesktop(app: App, flush: () => Promise<unknown>) {
   async function toPanel() {
     petMode = false;
     await invoke('topo', { on: false }).catch(() => {});
-    await win.setDecorations(true); // painel é janela normal: barra de título pra mover e fechar
     const m = await currentMonitor().catch(() => null);
     const k = m?.scaleFactor ?? 1, aw = m ? m.workArea.size.width / k : 1240, ah = m ? m.workArea.size.height / k : 820;
     const w = Math.min(1240, Math.round(aw * 0.92)), h = Math.min(820, Math.round(ah * 0.9));
@@ -96,7 +131,6 @@ export async function initDesktop(app: App, flush: () => Promise<unknown>) {
     else await win.center();
   }
   async function toPet() {
-    await win.setDecorations(false);
     await placePet();
     petMode = true;
     await invoke('topo', { on: topo }).catch(() => {});
