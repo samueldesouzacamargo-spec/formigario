@@ -1,3 +1,9 @@
+import '@fontsource/pixelify-sans/400.css';
+import '@fontsource/pixelify-sans/600.css';
+import '@fontsource/pixelify-sans/700.css';
+import '@fontsource/work-sans/400.css';
+import '@fontsource/work-sans/500.css';
+import '@fontsource/work-sans/600.css';
 import './style.css';
 import { createWorld, newFarm, tick } from './sim/index';
 import { log, type Save } from './sim/world';
@@ -12,6 +18,7 @@ import { initPanel } from './ui/panel';
 import { initControls } from './ui/controls';
 import { initDetach, initMini } from './ui/mini';
 import type { App } from './ui/app';
+import { isDesktop, initDesktop } from './desktop';
 import type { SpeciesId } from './data/species';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector<T>(s)!;
@@ -124,5 +131,6 @@ initDetach($<HTMLButtonElement>('#pip'), [$('#frame'), $('#speed')], (w) => {
 
 start();
 
-if (import.meta.env.PROD && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js') // relativo: funciona em qualquer subpasta (ex.: GitHub Pages);
+if (isDesktop()) initDesktop(app, () => Promise.all([writeSave(app.w), writeReef(app.reef.S)])).catch((e) => console.error('desktop:', e));
+else if (import.meta.env.PROD && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js') // relativo: funciona em qualquer subpasta (ex.: GitHub Pages);
 if (import.meta.env.DEV) (window as any).formigario = app; // depuração no console

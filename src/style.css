@@ -127,3 +127,33 @@ body.widget .glass:hover .treats,body.widget .glass:hover .wout,body.widget .gla
 @media(prefers-reduced-motion:reduce){body.widget .treats,body.widget .wout{transition:none}}
 /* vidro bem pequeno: só o bicho e o relógio */
 @container (max-width:300px){.hud,#tags{display:none}.clock{font-size:10px;padding:2px 4px}}
+/* app de desktop (Tauri): janela transparente, sem borda; o pet é só o vidro com a moldura de madeira */
+html:has(body.desk.widget),body.desk.widget{background:transparent}
+body.desk.widget .frame{background:linear-gradient(180deg,#6d4729,var(--wood) 40%,var(--wood2));padding:7px;border-radius:12px;box-shadow:inset 0 1px 0 #8a6040,inset 0 -2px 0 #2a190c;cursor:grab}
+body.desk.widget .frame:active{cursor:grabbing}
+body.desk.widget .glass{cursor:grab}
+body.desk .deskbar{display:none}
+body.desk.widget .deskbar{display:flex;gap:4px;position:absolute;right:6px;top:28px;z-index:4}
+body.desk .deskbar button{font:600 11px "Pixelify Sans";color:#fff;background:#000a;border:0;border-radius:6px;padding:0 8px;min-height:26px;cursor:pointer}
+body.desk .deskbar button[aria-pressed=true]{background:#e8a33acc;color:#2a1d13}
+body.desk .deskbar button:hover{background:#000d}
+body.desk .deskbar button[aria-pressed=true]:hover{background:var(--acc)}
+body.desk .grip{display:none}
+body.desk.widget .grip{display:block;position:absolute;right:0;bottom:0;width:14px;height:14px;z-index:5;cursor:nwse-resize;background:linear-gradient(135deg,transparent 0 55%,#fff8 55% 62%,transparent 62% 72%,#fff8 72% 79%,transparent 79%)}
+body.desk.widget .treats{right:18px}
+@media(hover:hover){body.desk.widget .deskbar,body.desk.widget .grip{opacity:0;transition:opacity .2s}
+body.desk.widget .glass:hover .deskbar,body.desk.widget .glass:hover .grip,body.desk.widget .glass:focus-within .deskbar{opacity:1}}
+@media(prefers-reduced-motion:reduce){body.desk.widget .deskbar,body.desk.widget .grip{transition:none}}
+@container (max-width:300px){.deskbar{top:24px}}
+/* desktop: pet no tamanho exato do vidro; painel com fundo opaco e barra de título própria */
+body.desk.widget .glass{width:min(100%,calc((100dvh - 14px) * 1.6))}
+html:has(body.desk:not(.widget)){background:var(--bg)}
+body.desk:not(.widget){min-height:100dvh;padding-top:38px;border:1px solid var(--line);box-sizing:border-box}
+.deskhead,.pgrip{display:none}
+body.desk:not(.widget) .deskhead{display:flex;align-items:center;gap:4px;position:fixed;inset:0 0 auto 0;height:38px;padding:0 4px 0 14px;z-index:20;background:var(--wood2);color:#f1e7d6;cursor:default;user-select:none;-webkit-user-select:none}
+.deskhead .t{flex:1;font:600 15px "Pixelify Sans"}
+.deskhead button{font:600 13px "Pixelify Sans";color:inherit;background:none;border:0;border-radius:6px;min-width:36px;height:30px;padding:0 10px;cursor:pointer}
+.deskhead button:hover{background:#ffffff22}
+.deskhead [data-a=close]:hover{background:#c0392b}
+.deskhead [data-a=min],.deskhead [data-a=close]{font-size:18px;padding:0}
+body.desk:not(.widget) .pgrip{display:block;position:fixed;right:0;bottom:0;width:16px;height:16px;z-index:21;cursor:nwse-resize;background:linear-gradient(135deg,transparent 0 55%,var(--mute) 55% 62%,transparent 62% 72%,var(--mute) 72% 79%,transparent 79%)}
