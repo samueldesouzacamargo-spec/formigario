@@ -3,6 +3,7 @@
 import { totalFood, active, type World, type Weights } from '../world';
 import { antCap } from '../../data/levels';
 import { roleCounts, roleProgress } from '../roles';
+import { moodName } from '../life';
 
 export interface BrainOut { w: Weights; foco: string; thought: string; evento: string | null }
 /** Interface pronta pra trocar a chamada direta por um proxy (ex.: Cloudflare Worker) que guarda a chave. */
@@ -21,6 +22,9 @@ export function snapshot(w: World) {
     chovendo: w.rain > 0,
     seg_desde_ultimo_petisco: S.lastTreat ? Math.round((Date.now() - S.lastTreat) / 1000) : null,
     celulas_por_cavar: w.wantLeft,
+    periodo: w.life.phase,
+    humor: moodName(w.life.mood),
+    dormindo: w.ants.filter((a) => a.mind.nap).length,
     ultimos_eventos: S.logs.slice(0, 5).map((l) => l[1]),
   };
 }
@@ -40,7 +44,7 @@ const SCHEMA = {
 const SYSTEM = `Você é o cérebro coletivo de uma colônia de formigas num formigário digital.
 Recebe o estado da colônia em JSON e devolve a política: pesos de 0 a 3 para cada tarefa (a colônia divide as operárias entre as funções nessa proporção, aos poucos), o foco da escavação
 e um pensamento curto (até 140 caracteres, pt-BR, voz de colônia de formigas, sem emojis).
-Reaja à situação: chuva → quase ninguém forrageia; petisco na superfície → forragear alto; câmara em obra → cavar; ovos → cuidar_crias; lixo → limpar.
+Reaja à situação: noite/madrugada → menos forragear, mais cuidar_crias; chuva → quase ninguém forrageia; petisco na superfície → forragear alto; câmara em obra → cavar; ovos → cuidar_crias; lixo → limpar.
 "evento" é opcional: uma frase curta pro diário quando algo notável acontecer, senão null.`;
 
 const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? Math.min(3, Math.max(0, n)) : 0.5; };

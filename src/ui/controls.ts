@@ -11,6 +11,7 @@ import { ROLE_NAMES, rolesOf, roleCounts, roleProgress } from '../sim/roles';
 import { ask, tell } from './dialog';
 import { feed, growth } from '../aquarium/sim';
 import { darkness } from '../sim/clock';
+import { lifeLine } from '../sim/brain/local';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector<T>(s)!;
 const SPEEDS = [0.75, 1, 1.5, 2];
@@ -81,13 +82,13 @@ export function initControls(app: App, opts: Opts, onOpts: (o: Opts) => void) {
   function brain() {
     const b = app.w.brain, x = b.w;
     const L: [string, number][] = [['Cavar', x.dig], ['Forragear', x.forage], ['Cuidar crias', x.nurse], ...(app.w.sp.fungus ? [['Jardinar', x.garden] as [string, number]] : []), ['Limpeza', x.haul]];
-    const key = L.map((l) => l[1].toFixed(2)).join() + b.thought + b.source + app.brainError;
+    const life = lifeLine(app.w), key = L.map((l) => l[1].toFixed(2)).join() + b.thought + b.source + app.brainError + life;
     if (key === brainKey) return;
     brainKey = key;
     const mx = Math.max(...L.map((l) => l[1]), 0.01), sum = L.reduce((a, l) => a + l[1], 0) || 1;
     el.prio.innerHTML = L.map((l) => `<span>${l[0]}</span><i><b style="width:${(l[1] / mx) * 100}%"></b></i><span>${Math.round((l[1] / sum) * 100)}%</span>`).join('');
     el.thought.textContent = `“${b.thought}”`;
-    el.src.textContent = b.source === 'gemini' ? 'Cérebro: Gemini' : `Cérebro: local${app.brainError ? ` (Gemini: ${app.brainError})` : ''}`;
+    el.src.textContent = (b.source === 'gemini' ? 'Cérebro: Gemini' : `Cérebro: local${app.brainError ? ` (Gemini: ${app.brainError})` : ''}`) + ` · ${life}`;
   }
 
   $('#new').onclick = async () => { if (await ask('Começar uma fazenda nova? A colônia atual será perdida.', 'Nova fazenda')) app.newFarm(); };

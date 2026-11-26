@@ -3,12 +3,17 @@ import { W, N, SURF, roomOf, active, dugIn, log, type World, type Ant, type Room
 import { bfs, toCell, walkable } from './path';
 import { TREATS, type TreatId } from '../data/treats';
 import { neededRole } from './roles';
+import { newMind, traitOf, wantsNap, napTime, isNight, emote } from './life';
 
 type Res = { path: number[] } | null;
 const nav = <T>(w: World, s: number, goal: (c: number) => T | false) => bfs(w.S.dug, s, goal, w.rain > 0);
 
 export function spawn(w: World, i: number) {
-  w.ants.push({ i, path: null, pi: 0, mt: Math.random(), face: Math.random() < 0.5 ? 1 : -1, step: 0, carry: null, wait: 0, then: null, task: 'idle', role: neededRole(w), spd: w.sp.spd * (0.85 + Math.random() * 0.3), target: -1, load: 0, home: false });
+  const mind = newMind(w.S.seed, w.ants.length, w.S.sp);
+  const a: Ant = { i, path: null, pi: 0, mt: Math.random(), face: Math.random() < 0.5 ? 1 : -1, step: 0, carry: null, wait: 0, then: null, task: 'idle', role: neededRole(w), spd: w.sp.spd * (0.85 + Math.random() * 0.3), target: -1, load: 0, home: false, mind };
+  a.spd *= traitOf(a).spd;
+  w.ants.push(a);
+  return a;
 }
 /** célula de nascimento: berçário, câmara real ou superfície */
 export function birthCell(w: World) {
@@ -48,6 +53,8 @@ function newTask(w: World, a: Ant) {
   // tempestade: construtoras (e umas ajudantes) tampam a entrada com terra
   if (w.rain > 0 && w.wx.storm && w.wx.plug < 1 && S.dug[SURF * W + w.ex] && (a.role === 'dig' || Math.random() < 0.4)) return plug(w, a);
   if (w.rain > 0 && ((a.i / W) | 0) < SURF + 2) return shelter(w, a);
+  if (wantsNap(w, a)) return nap(w, a);
+  if (quirk(w, a)) return;
   const can: Record<Role, boolean> = {
     dig: w.wantLeft > w.reserved.size,
     forage: !w.rain, // na chuva ninguém sai
@@ -56,9 +63,11 @@ function newTask(w: World, a: Ant) {
     haul: S.trash >= 1 && !!roomOf(w, 'lixo'),
   };
   // com petisco lá fora, coletoras correm
-  const forageMul = (w.treats.length ? 3 : w.rooms.some((r) => r.type !== 'rainha' && active(r)) ? 1 : 0.25);
+  const tr = a.mind.trait, bold = tr === 'corajosa' || tr === 'curiosa';
+  const forageMul = (w.treats.length ? (tr === 'corajosa' ? 5 : 3) : w.rooms.some((r) => r.type !== 'rainha' && active(r)) ? 1 : 0.25)
+    * (isNight(w) && !w.treats.length && !bold ? 0.45 : 1); // de noite só as mais ousadas saem sem motivo
   const own = can[a.role];
-  const o: [Task, number][] = [['idle', own ? 0.5 : 0.3]];
+  const o: [Task, number][] = [['idle', (own ? 0.5 : 0.3) * traitOf(a).idle]];
   for (const r of Object.keys(can) as Role[]) {
     if (!can[r]) continue;
     const base = r === a.role ? 6 : own ? b[r] * 0.12 : b[r];
@@ -113,7 +122,53 @@ function plug(w: World, a: Ant) {
 /** desce pra longe da entrada e espera a chuva */
 function shelter(w: World, a: Ant) {
   a.task = 'idle';
-  go(a, nav(w, a.i, (c) => ((c / W) | 0) >= SURF + 5), () => { a.wait = 2 + Math.random() * 4; });
+  const deep = a.mind.trait === 'medrosa' ? SURF + 16 : SURF + 5; // a medrosa corre lá pro fundo
+  go(a, nav(w, a.i, (c) => ((c / W) | 0) >= deep) ?? nav(w, a.i, (c) => ((c / W) | 0) >= SURF + 5), () => { a.wait = 2 + Math.random() * 4; });
+}
+
+/** cochilo: vai pra uma câmara tranquila (nunca a lixeira) e dorme */
+function nap(w: World, a: Ant) {
+  a.task = 'idle';
+  const quiet = w.rooms.filter((r) => r.type !== 'lixo' && r.ph <= w.level && active(r));
+  const pref = quiet.filter((r) => r.type === (a.mind.trait === 'preguicosa' ? 'crias' : 'rainha'));
+  const list = pref.length && Math.random() < 0.5 ? pref : quiet;
+  const rm = list.length ? list[(Math.random() * list.length) | 0] : null;
+  const sleep = () => {
+    a.wait = napTime(w, a); a.mind.nap = true; emote(a, 'z', 2);
+    a.then = () => { a.mind.nap = false; if (Math.random() < 0.3) emote(a, 'nota', 1.5); };
+  };
+  if (!rm) return sleep(); // sem câmara ainda: dorme onde está
+  goRoom(w, a, rm, sleep);
+  if (!a.path) sleep(); // sem caminho: idem
+}
+
+/**
+ * O jeito de cada uma: a curiosa sai pra olhar, a gulosa passa na despensa, a sociável visita a rainha.
+ * Devolve true quando a formiga foi fazer outra coisa.
+ */
+function quirk(w: World, a: Ant) {
+  if (!w.queen.home) return false; // fundação: sem distração
+  const t = a.mind.trait, r = Math.random();
+  if (t === 'curiosa' && !w.rain && r < 0.07) {
+    a.task = 'idle';
+    const gx = 4 + ((Math.random() * (W - 8)) | 0);
+    go(a, nav(w, a.i, toSurface((x) => Math.abs(x - gx) <= 1)), () => { a.wait = 1.5 + Math.random() * 2; emote(a, '?', 2); });
+    return true;
+  }
+  if (t === 'gulosa' && r < 0.08) {
+    const p = roomOf(w, 'comida') || roomOf(w, 'mel') || roomOf(w, 'fungo');
+    if (!p || !p.items.length && !p.fung) return false;
+    a.task = 'idle';
+    goRoom(w, a, p, () => { a.wait = 1.5 + Math.random() * 2; a.mind.energy = Math.min(1, a.mind.energy + 0.2); emote(a, 'coracao', 2); });
+    return true;
+  }
+  if (t === 'sociavel' && r < 0.04 && w.queen.home) {
+    a.task = 'idle';
+    go(a, nav(w, a.i, (c) => Math.abs((c % W) - (w.queen.i % W)) <= 2 && Math.abs(((c / W) | 0) - ((w.queen.i / W) | 0)) <= 1), () => { a.wait = 1.2; emote(a, 'coracao', 2); emote(w.queen, 'coracao', 2); });
+    return true;
+  }
+  if (t === 'trabalhadora' && a.mind.energy < 0.3 && r < 0.3) emote(a, 'gota', 2); // cansada, mas segue
+  return false;
 }
 
 /** começou a chover: quem está lá fora (ou indo pra lá) volta pra dentro */
@@ -228,10 +283,11 @@ function advance(a: Ant, d: number, rate: number, done: () => void, onStep?: () 
 
 export function stepAnts(w: World, d: number) {
   for (const a of w.ants) {
+    if (a.mind.hold > 0) { a.mind.hold -= d; continue; } // parada cumprimentando, sem perder a rota
     if (a.wait > 0) {
       a.wait -= d;
-      // fica mexendo de um lado pro outro dentro da câmara
-      if (Math.random() < d * 1.2) {
+      // fica mexendo de um lado pro outro dentro da câmara (dormindo, não)
+      if (!a.mind.nap && Math.random() < d * 1.2) {
         const x = a.i % W, n = Math.random() < 0.5 ? a.i + 1 : a.i - 1;
         if (Math.abs((n % W) - x) === 1 && walkable(w.S.dug, n) && w.roomId[n] === w.roomId[a.i]) { a.face = n > a.i ? 1 : -1; a.i = n; a.step++; }
       }

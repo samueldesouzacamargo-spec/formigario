@@ -33,7 +33,23 @@ export interface Ant {
   i: number; path: number[] | null; pi: number; mt: number; face: 1 | -1; step: number;
   carry: Carry | null; wait: number; then: (() => void) | null; task: Task; role: Role; spd: number;
   target: number; load: number; home: boolean;
+  mind: Mind;
 }
+/** Traço de personalidade: muda velocidade, preguiça, sono e o que chama atenção. */
+export type Trait = 'trabalhadora' | 'curiosa' | 'sociavel' | 'preguicosa' | 'gulosa' | 'medrosa' | 'corajosa';
+/** Balãozinho em pixel art sobre a cabeça. */
+export type Emote = 'z' | '!' | '?' | 'coracao' | 'nota' | 'reticencias' | 'brilho' | 'gota';
+/** A parte "viva" de cada formiga: nome, jeito, energia e o que está sentindo agora. */
+export interface Mind {
+  name: string; trait: Trait;
+  energy: number; // 0–1: cai trabalhando, volta cochilando
+  emote: Emote | null; emoteT: number;
+  hold: number; // segundos parada no meio do caminho (cumprimentando alguém), sem perder a rota
+  greetT: number; // espera até poder cumprimentar de novo
+  nap: boolean;
+  born: number; // segundos simulados de vida
+}
+export type Phase = 'madrugada' | 'amanhecer' | 'dia' | 'entardecer' | 'noite';
 export interface Treat { type: TreatId; x: number; n: number; twig?: boolean }
 /** algo caindo do céu (folha, galho, petisco) até tocar o chão */
 export interface Fall { type: TreatId; x: number; y: number; vy: number; n: number; twig: boolean }
@@ -65,6 +81,20 @@ export interface World {
   falls: Fall[]; worm: Worm | null; holes: Map<number, number>; // célula → segundos até fechar
   lastFood: number;
   logN: number; // muda quando o diário muda
+  life: Life;
+}
+/** Estado coletivo do comportamento: período do dia, humor, o que já foi dito. */
+export interface Life {
+  clock: () => Date; // injetável nos testes
+  phase: Phase; dark: number; // 0 = dia claro, ~0,6 = madrugada
+  mood: number; // -1 (abatida) … 1 (eufórica)
+  said: string[]; // últimas falas, pra não repetir
+  thoughtT: number; // segundos até poder trocar o pensamento sem motivo
+  ctx: string; // contexto do último pensamento
+  quipT: number; // segundos até a próxima fofoca no diário
+  t: number; // acumulador de 1 s
+  gt: number; // acumulador dos cumprimentos
+  lastTreatT: number; // segundos simulados desde o último petisco que caiu
 }
 
 export const SAVE_VERSION = 1;

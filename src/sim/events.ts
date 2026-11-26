@@ -2,6 +2,7 @@
 // folhas e galhos caindo, minhoca atravessando a terra.
 import { W, H, SURF, log, type World } from './world';
 import { takeCover, dropTreat } from './ants';
+import { react } from './life';
 
 const wake = (w: World) => { w.brain.t = 0; w.brain.lock = 0; w.brain.event = true; };
 
@@ -10,6 +11,7 @@ export function startRain(w: World, storm: boolean) {
   w.wx.storm = storm; w.wx.plugged = false; w.wx.flooded = false;
   log(w, storm ? 'Tempestade chegando! As construtoras correm pra tampar a entrada com terra.' : 'Começou a chover fraquinho. Todo mundo pra dentro do formigueiro.');
   takeCover(w); wake(w);
+  react(w, storm ? 'tempestade' : 'chuva');
 }
 
 export function startWorm(w: World) {
@@ -22,12 +24,13 @@ export function startWorm(w: World) {
 function stepStorm(w: World, d: number) {
   const x = w.wx, open = w.S.dug[SURF * W + w.ex] === 1;
   if (w.rain > 0 && x.storm) {
-    if (x.plug >= 1 && !x.plugged) { x.plugged = true; log(w, 'Entrada tampada. A água parou de entrar.'); }
+    if (x.plug >= 1 && !x.plugged) { x.plugged = true; log(w, 'Entrada tampada. A água parou de entrar.'); react(w, 'tampou'); }
     if (open && x.plug < 1) x.flood = Math.min(1, x.flood + d * 0.007 * (1 - x.plug));
     else x.flood = Math.max(0, x.flood - d * 0.01); // tampado: a terra vai bebendo a água
     if (x.flood > 0.5 && !x.flooded) {
       x.flooded = true;
       log(w, 'Entrou água antes de tamparem! Umas galerias alagaram e estragou um pouco de comida.');
+      react(w, 'alagou');
       for (const r of w.rooms) if (r.type !== 'lixo' && r.items.length) r.items.splice(0, Math.min(2, r.items.length));
     }
   } else {
@@ -46,6 +49,7 @@ function stepFalls(w: World, d: number) {
     w.falls.splice(k, 1);
     w.treats.push({ type: f.type, x: f.x, n: f.n, twig: f.twig || undefined });
     wake(w);
+    react(w, 'petisco', f.x);
   }
 }
 
