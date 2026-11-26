@@ -1,0 +1,28 @@
+# Gera o instalador de Windows (.exe e .msi) do app de desktop.
+# Rode em Actions → "App de desktop" → Run workflow, ou empurre uma tag v* (ex.: v0.1.0).
+# O instalador fica em "Artifacts" no fim da execução.
+name: App de desktop
+on:
+  workflow_dispatch:
+  push: { tags: ['v*'] }
+permissions: { contents: read }
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with: { workspaces: 'src-tauri -> target' }
+      - run: npm ci
+      - run: npm test
+      - run: npm run desktop:build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: formigario-windows
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/msi/*.msi
+          if-no-files-found: error
