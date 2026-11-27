@@ -5,6 +5,7 @@ import { walkable } from './path';
 import { localThink } from './brain/local';
 import { startRain, startWorm, nature } from './events';
 import { rebalance } from './roles';
+import { stepLife, react, TRAITS } from './life';
 import { levelOf, antCap } from '../data/levels';
 import { ROOMS } from '../data/rooms';
 
@@ -26,13 +27,14 @@ function checkLevel(w: World) {
   const nr = w.rooms.find((r) => r.ph === nl);
   log(w, `Nível ${nl}! ` + (nr ? `Nova câmara liberada: ${ROOMS[nr.type][0]}.` : 'A colônia está mais forte.'));
   w.brain.t = 0; w.brain.lock = 0; w.brain.event = true;
+  react(w, 'nivel');
 }
 
 export function econ(w: World, d: number) {
   const S = w.S, food = totalFood(w);
   S.pros += d * prosRate(w) * (food > 0 ? 1 : 0.35);
   checkLevel(w);
-  if (food === 0 && w.lastFood > 0) { w.brain.t = 0; w.brain.lock = 0; w.brain.event = true; }
+  if (food === 0 && w.lastFood > 0) { w.brain.t = 0; w.brain.lock = 0; w.brain.event = true; react(w, 'fome'); }
   w.lastFood = food;
 
   if ((w.tm.eat += d) > 4) { w.tm.eat = 0; eat(w); }
@@ -52,12 +54,14 @@ export function econ(w: World, d: number) {
   S.prog += d * (0.25 + nurses * 0.5);
   if (S.prog >= 10 && S.eggs > 0 && w.ants.length < antCap(w.level)) {
     S.prog = 0; S.eggs--;
-    spawn(w, birthCell(w));
-    log(w, `Nasceu uma operária. Agora são ${w.ants.length}.`);
+    const a = spawn(w, birthCell(w));
+    log(w, `Nasceu a ${a.mind.name}, uma operária ${TRAITS[a.mind.trait].nome}. Agora são ${w.ants.length}.`);
+    react(w, 'nasceu', -1, a);
   }
   if ((w.tm.evap += d) > 1) { w.tm.evap = 0; evaporate(w.ph); }
   weather(w, d);
   nature(w, d);
+  stepLife(w, d, food);
   if (w.brain.lock > 0) w.brain.lock -= d;
   if ((w.brain.t -= d) <= 0) { w.brain.t = 10; if (w.brain.lock <= 0) localThink(w); rebalance(w); }
 }
@@ -75,6 +79,7 @@ export function weather(w: World, d: number) {
     w.rain = 0;
     log(w, w.wx.plug > 0 ? 'A chuva passou. Estão reabrindo a entrada.' : 'A chuva passou. Forrageiras de volta à superfície.');
     w.brain.t = 0; w.brain.lock = 0; w.brain.event = true;
+    react(w, 'chuva_passou');
     if (!w.worm && Math.random() < 0.5) startWorm(w); // terra molhada chama minhoca
   }
   if ((w.tm.ev += d) < 90) return;

@@ -1,5 +1,5 @@
 import { R, type Ctx } from './px';
-import { W, N, SURF, hash, active, type World, type Carry, type Fall } from '../sim/world';
+import { W, N, SURF, hash, active, type World, type Carry, type Fall, type Ant, type Emote } from '../sim/world';
 import { TREATS, type TreatId } from '../data/treats';
 import { SKW, SKQ, type Skin } from '../data/skins';
 
@@ -32,6 +32,33 @@ export function treatIcon(c: Ctx, type: TreatId) {
 export const skinColors = (list: Skin[], id: string, c: string, h: string) => { const s = list.find((x) => x.id === id) ?? list[0]; return { c: s.c ?? c, h: s.h ?? h, crown: s.crown }; };
 
 const EGG = ['#f6f0dc', '#efe3b8'];
+
+/** balõezinhos: desenho em pixels (# = cor) e cor */
+const GLYPH: Record<Emote, [string[], string]> = {
+  z: [['###', '..#', '.#.', '###'], '#cfe3ff'],
+  '!': [['#', '#', '.', '#'], '#ffd84a'],
+  '?': [['##.', '..#', '.#.', '...', '.#.'], '#9fe0ff'],
+  coracao: [['#.#', '###', '.#.'], '#ff7aa8'],
+  nota: [['.##', '.#.', '##.'], '#9ef07a'],
+  reticencias: [['#.#.#'], '#e8e0d0'],
+  brilho: [['.#.', '###', '.#.'], '#fff3a0'],
+  gota: [['.#', '##'], '#7ec8ff'],
+};
+function bubble(c: Ctx, a: Ant, x: number, y: number, now: number) {
+  const m = a.mind;
+  if (!m.emote) return;
+  const [g, col] = GLYPH[m.emote];
+  if (m.emote === 'brilho' && (now / 180 | 0) % 2) return; // pisca
+  const rise = m.emote === 'z' ? Math.round((1 - Math.min(1, m.emoteT / 1.6)) * -2) : 0;
+  const gx = x + a.face - (g[0].length >> 1), gy = y - 2 - g.length + rise;
+  for (let r = 0; r < g.length; r++) for (let k = 0; k < g[r].length; k++) {
+    if (g[r][k] !== '#') continue;
+    c.globalAlpha = 0.45; R(c, gx + k + 1, gy + r + 1, 1, 1, '#1a1008'); // sombrinha pra ler em qualquer fundo
+    c.globalAlpha = 1; R(c, gx + k, gy + r, 1, 1, col);
+  }
+}
+/** pulinho de festa (nota) e corpo parado no cochilo */
+const hop = (a: Ant, now: number) => (a.mind.emote === 'nota' && !a.path && ((now / 140 + a.i) | 0) % 2 ? -1 : 0);
 
 /** galho com folhas deitado no chão (encolhe conforme levam os pedaços) ou caindo */
 function twig(c: Ctx, x: number, y: number, n: number, tilt: number) {
@@ -123,7 +150,10 @@ export function drawLife(c: Ctx, w: World, now: number) {
     else { R(c, x - 2, y - 2, Math.min(6, s + 3), 2, d.c); R(c, x - 3, y - 2, 1, 1, d.d); R(c, x + 2, y - 3, 2, 1, d.d); R(c, x - 1, y, 1, 1, d.d); R(c, x + 2, y, 1, 1, d.d); }
   }
   const wk = skinColors(SKW, S.skW, w.sp.c, w.sp.h);
-  for (const a of w.ants) ant(c, a.i % W, surfY(w, a.i), a.face, wk.c, wk.h, a.step, w.sp.big, a.carry);
+  for (const a of w.ants) ant(c, a.i % W, surfY(w, a.i) + hop(a, now), a.face, wk.c, wk.h, a.step, w.sp.big, a.carry);
   const qk = skinColors(SKQ, S.skQ, w.sp.c, w.sp.h), q = w.queen;
   queen(c, q.i % W, surfY(w, q.i), q.face, qk.c, qk.h, q.step, qk.crown);
+  // balões por cima de tudo
+  for (const a of w.ants) bubble(c, a, a.i % W, surfY(w, a.i) + hop(a, now), now);
+  bubble(c, q, q.i % W, surfY(w, q.i) - 1, now);
 }
