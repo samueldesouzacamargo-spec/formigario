@@ -5,7 +5,7 @@ import { startRain, startWorm } from '../src/sim/events';
 import { dropTreat } from '../src/sim/ants';
 import { skyArc } from '../src/sim/clock';
 
-const grown = (seed: number) => { const w = createWorld(fresh(seed)); for (let k = 0; k < 30 * 600; k++) tick(w, 1 / 30); w.rain = 0; w.tm.ev = -1e9; return w; }; // sem clima sorteado
+const grown = (seed: number) => { const w = createWorld(fresh(seed)); w.life.clock = () => new Date(2026, 0, 1, 13, 0); for (let k = 0; k < 30 * 600; k++) tick(w, 1 / 30); w.rain = 0; w.tm.ev = -1e9; return w; }; // sem clima sorteado
 const run = (w: ReturnType<typeof grown>, sec: number) => { for (let k = 0; k < sec * 30; k++) tick(w, 1 / 30); };
 
 describe('eventos do formigário', () => {

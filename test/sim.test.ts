@@ -10,7 +10,8 @@ import { SPECIES, type SpeciesId } from '../src/data/species';
 import { LV } from '../src/data/levels';
 import { exportJSON, importJSON } from '../src/store/save';
 
-const world = (seed: number, sp: SpeciesId = 'sauva') => createWorld(fresh(seed, { sp }));
+// relógio fixo ao meio-dia: o resultado não depende da hora em que o teste roda (de madrugada a colônia dorme)
+const world = (seed: number, sp: SpeciesId = 'sauva') => { const w = createWorld(fresh(seed, { sp })); w.life.clock = () => new Date(2026, 0, 1, 13, 0); return w; };
 
 describe('geração', () => {
   it('é determinística por seed', () => {
